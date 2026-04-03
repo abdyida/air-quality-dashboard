@@ -30,7 +30,7 @@ def load_data(country):
     return df
 
 # Sidebar filters
-country = st.sidebar.selectbox("Select Country", ["KG", "US", "IN", "DE"])
+country = st.sidebar.selectbox("Select Country", ["US", "IN", "DE", "KG"])
 
 df = load_data(country)
 
