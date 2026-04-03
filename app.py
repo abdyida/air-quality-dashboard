@@ -5,7 +5,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="Air Quality Dashboard", layout="wide")
 
-st.title("🌍 Air Quality Dashboard")
+st.title("Air Quality Dashboard")
 st.write("Real-time air pollution data using OpenAQ API")
 
 # Load data
@@ -15,7 +15,14 @@ def load_data(country):
     response = requests.get(url)
     data = response.json()
 
+    # ✅ FIX: check if results exist
+    if "results" not in data:
+        return pd.DataFrame()
+
     df = pd.json_normalize(data["results"])
+
+    if df.empty:
+        return df
 
     df = df[["date.utc", "parameter", "value", "city"]]
     df["date.utc"] = pd.to_datetime(df["date.utc"])
@@ -26,6 +33,11 @@ def load_data(country):
 country = st.sidebar.selectbox("Select Country", ["KG", "US", "IN", "DE"])
 
 df = load_data(country)
+
+# ✅ FIX: handle empty data
+if df.empty:
+    st.error("No data available. Try another country.")
+    st.stop()
 
 pollutant = st.sidebar.selectbox("Select Pollutant", df["parameter"].unique())
 
@@ -52,7 +64,7 @@ with col1:
     st.plotly_chart(fig1, use_container_width=True)
 
 with col2:
-    st.subheader("📊 Average by City")
+    st.subheader("Average by City")
     avg_df = filtered_df.groupby("city")["value"].mean().reset_index()
     fig2 = px.bar(avg_df, x="city", y="value", color="city")
     st.plotly_chart(fig2, use_container_width=True)
