@@ -1,45 +1,34 @@
 import streamlit as st
 import pandas as pd
-import requests
 import plotly.express as px
 
-st.set_page_config(page_title="Air Quality Dashboard", layout="wide")
+st.set_page_config(page_title="Weather Dashboard", layout="wide")
 
-st.title("Air Quality Dashboard")
-st.write("Real-time air pollution data using OpenAQ API")
+st.title("🌍 Weather Dashboard")
+st.write("Interactive dashboard using real dataset")
 
-# Load data
+# Load data (stable dataset)
 @st.cache_data
-def load_data(country):
-    url = f"https://api.openaq.org/v2/measurements?country={country}&limit=1000"
-    response = requests.get(url)
-    data = response.json()
+def load_data():
+    df = pd.read_csv(
+        "https://raw.githubusercontent.com/plotly/datasets/master/2016-weather-data-seattle.csv"
+    )
 
-    # ✅ FIX: check if results exist
-    if "results" not in data:
-        return pd.DataFrame()
+    df = df.rename(columns={
+        "Date": "date.utc",
+        "Mean_TemperatureC": "value"
+    })
 
-    df = pd.json_normalize(data["results"])
-
-    if df.empty:
-        return df
-
-    df = df[["date.utc", "parameter", "value", "city"]]
     df["date.utc"] = pd.to_datetime(df["date.utc"])
+    df["parameter"] = "temperature"
+    df["city"] = "Seattle"
 
     return df
 
+df = load_data()
+
 # Sidebar filters
-country = st.sidebar.selectbox("Select Country", ["US", "IN", "DE", "KG"])
-
-df = load_data(country)
-
-# ✅ FIX: handle empty data
-if df.empty:
-    st.error("No data available. Try another country.")
-    st.stop()
-
-pollutant = st.sidebar.selectbox("Select Pollutant", df["parameter"].unique())
+parameter = st.sidebar.selectbox("Select Parameter", df["parameter"].unique())
 
 date_range = st.sidebar.slider(
     "Select Date Range",
@@ -50,7 +39,7 @@ date_range = st.sidebar.slider(
 
 # Filter data
 filtered_df = df[
-    (df["parameter"] == pollutant) &
+    (df["parameter"] == parameter) &
     (df["date.utc"] >= date_range[0]) &
     (df["date.utc"] <= date_range[1])
 ]
@@ -59,14 +48,14 @@ filtered_df = df[
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📈 Pollution Trend")
-    fig1 = px.line(filtered_df, x="date.utc", y="value", color="city")
+    st.subheader("📈 Temperature Trend")
+    fig1 = px.line(filtered_df, x="date.utc", y="value")
     st.plotly_chart(fig1, use_container_width=True)
 
 with col2:
-    st.subheader("Average by City")
+    st.subheader("📊 Average Temperature")
     avg_df = filtered_df.groupby("city")["value"].mean().reset_index()
-    fig2 = px.bar(avg_df, x="city", y="value", color="city")
+    fig2 = px.bar(avg_df, x="city", y="value")
     st.plotly_chart(fig2, use_container_width=True)
 
-st.write("Data source: OpenAQ API")
+st.write("Data source: Plotly public dataset")
